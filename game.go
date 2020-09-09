@@ -1,13 +1,20 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"math/rand"
+	"net/http"
 	"strconv"
 	"time"
 
 	tm "github.com/buger/goterm"
 )
+
+type postStruct struct {
+	move string
+}
 
 // ROCK : rock
 const ROCK string = "rock"
@@ -18,6 +25,7 @@ const PAPER string = "paper"
 // CISSORS : rock
 const CISSORS string = "cissors"
 
+var movesIndex = map[string]int{ROCK: 0, PAPER: 1, CISSORS: 2}
 var moves = []string{ROCK, PAPER, CISSORS}
 var roundCounter int = 0
 var p1Score int = 0
@@ -25,7 +33,13 @@ var p2Score int = 0
 var p1Move int = 0
 var p2Move int = 0
 
+func api() {
+	http.HandleFunc("/players/1/move", apiResponse)
+	log.Fatal(http.ListenAndServe(":8081", nil))
+}
+
 func main() {
+	go api()
 	tm.Clear()
 	tm.MoveCursor(1, 1)
 	tm.Flush()
@@ -57,6 +71,34 @@ func main() {
 		}
 
 		time.Sleep(4 * time.Second)
+	}
+}
+
+func apiResponse(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	switch r.Method {
+	case "GET":
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(moves[p1Move]))
+	case "POST":
+		w.WriteHeader(http.StatusCreated)
+		decoder := json.NewDecoder(r.Body)
+		var s postStruct
+		err := decoder.Decode(&s)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Print(s)
+		if s.move != "rock" && s.move != "paper" && s.move != "cissors" {
+			w.Write([]byte(`{"message": "Please provide a valid move (rock, paper or cissors)."}`))
+			break
+		}
+		p1Move = movesIndex[s.move] // ! should call a goroutine
+		w.Write([]byte(`{"message": "You've successfully submit your move (` + s.move + `)."}`))
+	default:
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(`{"message": "Can't find method requested"}`))
 	}
 }
 

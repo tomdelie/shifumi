@@ -9,3 +9,5 @@ services:
         working_dir: /home/go
         volumes:
                 - .:/home/go
+        ports: 
+            - "8081:8081"
