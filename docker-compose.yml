@@ -1,0 +1,11 @@
+version: "3.3"
+
+services:
+    go:
+        build: docker
+        user: go
+        tty: true
+        stdin_open: true
+        working_dir: /home/go
+        volumes:
+                - .:/home/go
