@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// ! LOGGERS ================
+// TestLogRoundStart : test
 func TestLogRoundStart(t *testing.T) {
 	result := logRoundStart(1)
 	var expectedResult string = "========== Round 1 =========="
@@ -16,63 +16,79 @@ func TestLogRoundStart(t *testing.T) {
 	}
 }
 
+// TestLogPlayerMove : test
 func TestLogPlayerMove(t *testing.T) {
-	result := logPlayerMove(1, 0)
-	var expectedResult string = "Player 1 play rock."
+	var player = playerStruct{0, 0}
+	result := logPlayerMove("Player", &player)
+	var expectedResult string = "Player play rock."
 
 	if result != expectedResult {
-		t.Errorf("logPlayerMove(1, 0) FAILED, expected %v, but go %v", expectedResult, result)
+		t.Errorf("logPlayerMove(\"Player\", &player) FAILED, expected %v, but go %v", expectedResult, result)
 	} else {
-		t.Logf("logPlayerMove(1, 0) PASSED")
+		t.Logf("logPlayerMove(\"Player\", &player) PASSED")
 	}
 }
 
+// TestLogPlayerScores : test
 func TestLogPlayerScores(t *testing.T) {
-	result := logPlayerScores(3, 1)
-	var expectedResult string = "Scores: P1 (3) | P2 (1)"
+	var player = playerStruct{3, 0}
+	var bot = playerStruct{1, 0}
+
+	result := logPlayerScores(&player, &bot)
+	var expectedResult string = "Scores: Player (3) | Bot (1)"
 
 	if result != expectedResult {
-		t.Errorf("logPlayerScores(3, 1) FAILED, expected %v, but go %v", expectedResult, result)
+		t.Errorf("logPlayerScores(&player, &bot) FAILED, expected %v, but go %v", expectedResult, result)
 	} else {
-		t.Logf("logPlayerScores(3, 1) PASSED")
+		t.Logf("logPlayerScores(&player, &bot) PASSED")
 	}
 }
 
+// TestLogTheWinner : test
 func TestLogTheWinner(t *testing.T) {
+	var player = playerStruct{0, 0}
+	var bot = playerStruct{0, 1}
+
 	// ! P2 win
-	result1 := logTheWinner(0, 1)
-	var expectedResult1 string = "Player 2 win."
+	result1 := logTheWinner(&player, &bot)
+	var expectedResult1 string = "Bot win."
 
 	if result1 != expectedResult1 {
-		t.Errorf("logTheWinner(0, 1) FAILED, expected %v, but go %v", expectedResult1, result1)
+		t.Errorf("logTheWinner(&player, &bot) FAILED, expected %v, but go %v", expectedResult1, result1)
 	} else {
-		t.Logf("logTheWinner(0, 1) PASSED")
+		t.Logf("logTheWinner(&player, &bot) PASSED")
 	}
 
 	// ! P1 win
-	result2 := logTheWinner(1, 0)
-	var expectedResult2 string = "Player 1 win."
+	player.moveIndex = 2
+	result2 := logTheWinner(&player, &bot)
+	var expectedResult2 string = "Player win."
 
 	if result2 != expectedResult2 {
-		t.Errorf("logTheWinner(1, 0) FAILED, expected %v, but go %v", expectedResult2, result2)
+		t.Errorf("logTheWinner(&player, &bot) FAILED, expected %v, but go %v", expectedResult2, result2)
 	} else {
-		t.Logf("logTheWinner(1, 0) PASSED")
+		t.Logf("logTheWinner(&player, &bot) PASSED")
 	}
 
 	// ! Draw
-	result3 := logTheWinner(1, 1)
+	player.moveIndex = 1
+	result3 := logTheWinner(&player, &bot)
 	var expectedResult3 string = "It's a draw."
 
 	if result3 != expectedResult3 {
-		t.Errorf("logTheWinner(1, 1) FAILED, expected %v, but go %v", expectedResult3, result3)
+		t.Errorf("logTheWinner(&player, &bot) FAILED, expected %v, but go %v", expectedResult3, result3)
 	} else {
-		t.Logf("logTheWinner(1, 1) PASSED")
+		t.Logf("logTheWinner(&player, &bot) PASSED")
 	}
 }
 
+// TestWhoIsTheWinner : test
 func TestWhoIsTheWinner(t *testing.T) {
+	var player = playerStruct{0, 0}
+	var bot = playerStruct{0, 0}
+
 	// ! 0
-	result1 := whoIsTheWinner(ROCK, ROCK)
+	result1 := whoIsTheWinner(&player, &bot)
 
 	if result1 != 0 {
 		t.Errorf("whoIsTheWinner(\"rock\", \"rock\") FAILED, expected %v, but go %v", 0, result1)
@@ -81,7 +97,8 @@ func TestWhoIsTheWinner(t *testing.T) {
 	}
 
 	// ! 1
-	result2 := whoIsTheWinner(PAPER, ROCK)
+	player.moveIndex = 1
+	result2 := whoIsTheWinner(&player, &bot)
 
 	if result2 != 1 {
 		t.Errorf("whoIsTheWinner(\"paper\", \"rock\") FAILED, expected %v, but go %v", 1, result2)
@@ -90,12 +107,13 @@ func TestWhoIsTheWinner(t *testing.T) {
 	}
 
 	// ! 2
-	result3 := whoIsTheWinner(ROCK, PAPER)
+	player.moveIndex = 0
+	bot.moveIndex = 1
+	result3 := whoIsTheWinner(&player, &bot)
 
 	if result3 != 2 {
 		t.Errorf("whoIsTheWinner(\"rock\", \"paper\") FAILED, expected %v, but go %v", 2, result3)
 	} else {
 		t.Logf("whoIsTheWinner(\"rock\", \"paper\") PASSED")
 	}
-
 }

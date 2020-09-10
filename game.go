@@ -13,8 +13,19 @@ import (
 )
 
 type postStruct struct {
-	move string
+	Move string
 }
+
+type playerStruct struct {
+	score     int
+	moveIndex int
+}
+
+var movesIndex = map[string]int{ROCK: 0, PAPER: 1, CISSORS: 2}
+var moves = []string{ROCK, PAPER, CISSORS}
+
+// ROUNDNUMBER : int
+const ROUNDNUMBER int = 10
 
 // ROCK : rock
 const ROCK string = "rock"
@@ -25,21 +36,58 @@ const PAPER string = "paper"
 // CISSORS : rock
 const CISSORS string = "cissors"
 
-var movesIndex = map[string]int{ROCK: 0, PAPER: 1, CISSORS: 2}
-var moves = []string{ROCK, PAPER, CISSORS}
-var roundCounter int = 0
-var p1Score int = 0
-var p2Score int = 0
-var p1Move int = 0
-var p2Move int = 0
+func handleGame(player *playerStruct, channel chan int) {
+	for {
+		player.moveIndex = <-channel
+	}
+}
 
-func api() {
-	http.HandleFunc("/players/1/move", apiResponse)
+func moveHandler(player *playerStruct, channel chan int) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		switch r.Method {
+		case "GET":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(moves[player.moveIndex]))
+		case "POST":
+			w.WriteHeader(http.StatusCreated)
+			decoder := json.NewDecoder(r.Body)
+			var p postStruct
+			err := decoder.Decode(&p)
+			if err != nil {
+				panic(err)
+			}
+			if p.Move != "rock" && p.Move != "paper" && p.Move != "cissors" {
+				w.Write([]byte(`{"message": "Please provide a valid move (rock, paper or cissors)."}`))
+				break
+			}
+
+			tm.Println(tm.Color(tm.Bold("[API POST] Player will now play "+p.Move+"."), tm.RED))
+			w.Write([]byte(`{"message": "You've successfully submit your move (` + p.Move + `)."}`))
+			channel <- movesIndex[p.Move]
+		default:
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"message": "Can't find method requested"}`))
+		}
+	}
+}
+
+func api(player *playerStruct, channel chan int) {
+	http.HandleFunc("/players/1/move", moveHandler(player, channel))
 	log.Fatal(http.ListenAndServe(":8081", nil))
 }
 
 func main() {
-	go api()
+	var player = playerStruct{score: 0, moveIndex: 0}
+	var bot = playerStruct{score: 0, moveIndex: 0}
+
+	var roundCounter int = 0
+	var channel chan int
+	channel = make(chan int)
+	go handleGame(&player, channel)
+	go api(&player, channel)
+
 	tm.Clear()
 	tm.MoveCursor(1, 1)
 	tm.Flush()
@@ -51,22 +99,22 @@ func main() {
 		tm.Flush()
 		counter()
 
-		p1Move = rand.Intn(3)
-		p2Move = rand.Intn(3)
-		fmt.Println(logPlayerMove(1, p1Move))
-		fmt.Println(logPlayerMove(2, p2Move))
+		//p1Move = rand.Intn(3)
+		bot.moveIndex = rand.Intn(3)
+		fmt.Println(logPlayerMove("Player", &player))
+		fmt.Println(logPlayerMove("Bot", &bot))
 
 		time.Sleep(4 * time.Second)
 
-		tm.Println(tm.Color(logTheWinner(p1Move, p2Move), tm.YELLOW))
+		tm.Println(tm.Color(logTheWinner(&player, &bot), tm.YELLOW))
 		tm.Flush()
 
 		time.Sleep(2 * time.Second)
 
-		tm.Println(logPlayerScores(p1Score, p2Score))
+		tm.Println(logPlayerScores(&player, &bot))
 		tm.Flush()
 
-		if roundCounter >= 3 {
+		if roundCounter >= ROUNDNUMBER {
 			return
 		}
 
@@ -74,68 +122,40 @@ func main() {
 	}
 }
 
-func apiResponse(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	switch r.Method {
-	case "GET":
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(moves[p1Move]))
-	case "POST":
-		w.WriteHeader(http.StatusCreated)
-		decoder := json.NewDecoder(r.Body)
-		var s postStruct
-		err := decoder.Decode(&s)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Print(s)
-		if s.move != "rock" && s.move != "paper" && s.move != "cissors" {
-			w.Write([]byte(`{"message": "Please provide a valid move (rock, paper or cissors)."}`))
-			break
-		}
-		p1Move = movesIndex[s.move] // ! should call a goroutine
-		w.Write([]byte(`{"message": "You've successfully submit your move (` + s.move + `)."}`))
-	default:
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"message": "Can't find method requested"}`))
-	}
-}
-
-func whoIsTheWinner(p1Move string, p2Move string) int {
-	if p1Move == p2Move {
+func whoIsTheWinner(player *playerStruct, bot *playerStruct) int {
+	if player.moveIndex == bot.moveIndex {
 		return 0
 	}
 
-	if (p1Move == ROCK && p2Move == CISSORS) ||
-		(p1Move == PAPER && p2Move == ROCK) ||
-		(p1Move == CISSORS && p2Move == PAPER) {
+	if (moves[player.moveIndex] == ROCK && moves[bot.moveIndex] == CISSORS) ||
+		(moves[player.moveIndex] == PAPER && moves[bot.moveIndex] == ROCK) ||
+		(moves[player.moveIndex] == CISSORS && moves[bot.moveIndex] == PAPER) {
 		return 1
 	}
 
 	return 2
 }
 
-func logPlayerScores(p1Score int, p2Score int) string {
-	return "Scores: P1 (" + tm.Color(strconv.Itoa(p1Score), tm.BLUE) + ") | P2 (" + tm.Color(strconv.Itoa(p2Score), tm.BLUE) + ")"
+func logPlayerScores(player *playerStruct, bot *playerStruct) string {
+	return "Scores: Player (" + strconv.Itoa(player.score) + ") | Bot (" + strconv.Itoa(bot.score) + ")"
 }
 
-func logTheWinner(p1Move int, p2Move int) string {
-	if whoIsTheWinner(moves[p1Move], moves[p2Move]) == 1 {
-		p1Score++
-		return "Player 1 win."
+func logTheWinner(player *playerStruct, bot *playerStruct) string {
+	if whoIsTheWinner(player, bot) == 1 {
+		player.score++
+		return "Player win."
 	}
 
-	if whoIsTheWinner(moves[p1Move], moves[p2Move]) == 2 {
-		p2Score++
-		return "Player 2 win."
+	if whoIsTheWinner(player, bot) == 2 {
+		bot.score++
+		return "Bot win."
 	}
 
 	return "It's a draw."
 }
 
-func logPlayerMove(playerID int, playerMove int) string {
-	return "Player " + strconv.Itoa(playerID) + " play " + moves[playerMove] + "."
+func logPlayerMove(playerType string, player *playerStruct) string {
+	return playerType + " play " + moves[player.moveIndex] + "."
 }
 
 func logRoundStart(roundCounter int) string {
@@ -143,7 +163,7 @@ func logRoundStart(roundCounter int) string {
 }
 
 func counter() {
-	for i := 3; i > 0; i-- {
+	for i := 5; i > 0; i-- {
 		tm.Print(tm.Color(strconv.Itoa(i)+", ", tm.RED))
 		time.Sleep(time.Second)
 		tm.Flush()
