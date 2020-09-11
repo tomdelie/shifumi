@@ -1,4 +1,3 @@
 #!bin/sh
 
-curl -X POST -d "{\"move\": \"paper\"}" http://localhost:8081/players/1/move
-echo "\n"
+ab -n 100 -c 100 -v 2 -T application/json -p post_data.json http://localhost:8081/players/1/move

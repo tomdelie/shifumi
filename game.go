@@ -63,7 +63,8 @@ func moveHandler(player *playerStruct, channel chan int) func(w http.ResponseWri
 				break
 			}
 
-			tm.Println(tm.Color(tm.Bold("[API POST] Player will now play "+p.Move+"."), tm.RED))
+			fmt.Println("[API POST] Player will now play " + p.Move + ".")
+			// tm.Println(tm.Color(tm.Bold("[API POST] Player will now play "+p.Move+"."), tm.RED))
 			w.Write([]byte(`{"message": "You've successfully submit your move (` + p.Move + `)."}`))
 			channel <- movesIndex[p.Move]
 		default:
